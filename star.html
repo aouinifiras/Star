@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Star Schema Visuel - Incidents KPIs</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background:rgb(254, 187, 160);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: #2c3e50;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background:black;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .star-schema-container {
+            position: relative;
+            width: 100%;
+            height: 800px;
+            margin: 20px 0;
+            background: radial-gradient(circle at center, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .fact-table {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-width: 300px;
+            text-align: center;
+            border: 3px solid #fff;
+            z-index: 1;
+        }
+
+        .fact-table h3 {
+            margin: 0 0 15px 0;
+            font-size: 1.4em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .fact-table .measures {
+            font-size: 0.9em;
+            line-height: 1.4;
+            opacity: 0.95;
+        }
+
+        .dimension {
+            position: absolute;
+            background:rgb(254, 187, 160);
+            color: black;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+            min-width: 180px;
+            text-align: center;
+            border: 2px solid #fff;
+            z-index: 2;
+        }
+
+        .dimension h4 {
+            margin: 0 0 10px 0;
+            font-size: 1.1em;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .dimension .attributes {
+            font-size: 0.8em;
+            line-height: 1.3;
+            opacity: 0.9;
+        }
+
+        /* Distribution circulaire des dimensions autour du centre */
+        .dim-date {
+            top: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dim-territory {
+            top: 100px;
+            right: 30%;
+            transform: translate(50%, -50%);
+        }
+
+        .dim-state {
+            bottom: 15%;
+            left: 31%;
+            transform: translate(-50%, 50%);
+        }
+
+        .dim-contact {
+            bottom: 12%;
+            right: 30%;
+            transform: translate(50%, 50%);
+        }
+
+        .dim-priority {
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        .dim-assignment {
+            top: 15%;
+            left: 30%;
+            transform: translate(-50%, -50%);
+        }
+
+        .arrow {
+            position: absolute;
+            width: 2px;
+            background: #333;
+            z-index: 0;
+        }
+
+        .arrow::after {
+            content: "";
+            position: absolute;
+            top: 50%;
+            right: -5px;
+            transform: translateY(-50%);
+            border-top: 5px solid transparent;
+            border-bottom: 5px solid transparent;
+            border-left: 5px solid #333;
+        }
+
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 5px;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .fact-color { background: linear-gradient(135deg, #ff6b6b, #ee5a24); }
+        .dim-color { background :rgb(254, 187, 160); }
+
+        .kpi-legend {
+            margin-top: 30px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .kpi-item {
+            background:#ffecd4;
+            color: black;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .kpi-item h4 {
+            margin: 0 0 8px 0;
+            font-size: 1.1em;
+        }
+
+        .kpi-item p {
+            margin: 0;
+            font-size: 0.9em;
+            opacity: 0.95;
+        }
+
+        /* Lignes de connexion vers le centre - radiating from center avec longueurs ajustées */
+        .connection-line {
+            position: absolute;
+            background: rgba(44, 62, 80, 0.4);
+            z-index: 0;
+            transform-origin: center;
+        }
+
+        /* Ligne vers Dim_Date (top) - atteignant la dimension */
+        .line-date {
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 320px;
+            transform: translate(-50%, -100%);
+        }
+
+        /* Ligne vers Dim_Territory (top-right diagonal) - atteignant la dimension */
+        .line-territory {
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 360px;
+            transform: translate(-50%, -100%) rotate(30deg);
+            transform-origin: bottom center;
+        }
+
+        /* Ligne vers Dim_State (bottom-left diagonal) - nouvelle position */
+        .line-state {
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 320px;
+            transform: translate(-50%, 0%) rotate(30deg);
+            transform-origin: top center;
+        }
+
+        /* Ligne vers Dim_Contact (bottom-right diagonal) - atteignant la dimension */
+        .line-contact {
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 360px;
+            transform: translate(-50%, 0%) rotate(-30deg);
+            transform-origin: top center;
+        }
+
+        /* Ligne vers Dim_Priority (bottom) - atteignant la dimension */
+        .line-priority {
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 320px;
+            transform: translate(-50%, 0%);
+        }
+
+        /* Ligne vers Dim_Assignment (top-left diagonal) - atteignant la dimension */
+        .line-assignment {
+            top: 50%;
+            left: 50%;
+            width: 2px;
+            height: 360px;
+            transform: translate(-50%, -100%) rotate(-30deg);
+            transform-origin: bottom center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Star Schema - Incidents KPIs</h1>
+    </div>
+
+    <div class="legend">
+        <div class="legend-item">
+            <div class="legend-color fact-color"></div>
+            <span><strong>Table de Faits</strong></span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color dim-color"></div>
+            <span><strong>Dimensions</strong></span>
+        </div>
+    </div>
+
+    <div class="star-schema-container">
+        <!-- Lignes de connexion -->
+        <div class="connection-line line-date"></div>
+        <div class="connection-line line-assignment"></div>
+        <div class="connection-line line-priority"></div>
+        <div class="connection-line line-state"></div>
+        <div class="connection-line line-territory"></div>
+        <div class="connection-line line-contact"></div>
+
+        <!-- Dimensions distribuées en cercle autour de la table de faits -->
+        <div class="dimension dim-date">
+            <h4>Dim_Date</h4>
+            <div class="attributes">
+                • date_id (PK)<br>
+                • created<br>
+                • closed_at<br>
+                • reopened_time
+            </div>
+        </div>
+
+        <div class="dimension dim-territory">
+            <h4>Dim_Territory</h4>
+            <div class="attributes">
+                • territory_id (PK)<br>
+                • Territory_Impacted
+            </div>
+        </div>
+
+        <div class="dimension dim-state">
+            <h4>Dim_State</h4>
+            <div class="attributes">
+                • state_id (PK)<br>
+                • state<br>
+                • major_incident_state
+            </div>
+        </div>
+
+        <div class="dimension dim-contact">
+            <h4>Dim_Contact_Type</h4>
+            <div class="attributes">
+                • contact_type_id (PK)<br>
+                • contact_type
+            </div>
+        </div>
+
+        <div class="dimension dim-priority">
+            <h4>Dim_Priority</h4>
+            <div class="attributes">
+                • priority_id (PK)<br>
+                • priority
+            </div>
+        </div>
+
+        <div class="dimension dim-assignment">
+            <h4> Dim_Assignment_Group</h4>
+            <div class="attributes">
+                • group_id (PK)<br>
+                • assignment_group
+            </div>
+        </div>
+
+        <!-- Table de faits au centre -->
+        <div class="fact-table">
+            <h3>Faits_Incidents</h3>
+            <div class="measures">
+                • incident_id (PK)<br>
+                • reassignment_count<br>
+                • date_id, group_id, priority_id, state_id, territory_id, contact_type_id (FK)<br>
+                • is_major_incident_network<br>
+                • is_active, is_closed<br>
+                • is_ping_pong, is_reopened<br>
+                • is_first_group_reaffected<br>
+                • is_reaffected_le_7, is_reaffected_gt_7
+            </div>
+        </div>
+    </div>
+
+    <div class="kpi-legend">
+        <div class="kpi-item"><h4>KPI 1</h4><p>Incidents majeurs MI créés par PWC Network%, impactant FR, urgent/critical, état accepté, non résolu/fermé</p></div>
+        <div class="kpi-item"><h4>KPI 2</h4><p>Taux des incidents actifs vs fermés (non resolved/closed)</p></div>
+        <div class="kpi-item"><h4>KPI 3</h4><p>Nombre d'incidents actifs par groupe d'assignation</p></div>
+        <div class="kpi-item"><h4>KPI 4</h4><p>Taux d'incident actifs vs Fermés</p></div>
+        <div class="kpi-item"><h4>KPI 5</h4><p>Tickets ping pong fermés (reassignment > 7)</p></div>
+        <div class="kpi-item"><h4>KPI 6</h4><p>Incidents ping pong actifs (reassignment > 7)</p></div>
+        <div class="kpi-item"><h4>KPI 7</h4><p>Incidents réouverts (nb / total incidents du mois)</p></div>
+        <div class="kpi-item"><h4>KPI 8</h4><p>Réaffectés ≥ 1 (reassignment > 0)</p></div>
+        <div class="kpi-item"><h4>KPI 9</h4><p>Réaffectés ≤ 7 (1 à 7)</p></div>
+        <div class="kpi-item"><h4>KPI 10</h4><p>Réaffectés > 7</p></div>
+        <div class="kpi-item"><h4>KPI 11</h4><p>Fermés par premier groupe (reassignment = 0)</p></div>
+    </div>
+</div>
+</body>
+</html>
